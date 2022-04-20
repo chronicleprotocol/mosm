@@ -18,6 +18,8 @@ function osm_poke() {
 }
 ```
 
+(Otherwise, these contracts should work exactly the same as their "split out" counterparts.)
+
 ## Build and test
 
 To build the contract from source do
