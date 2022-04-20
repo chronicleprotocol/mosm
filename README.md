@@ -1,7 +1,24 @@
-# mosm
-Combined Median and OSM smart contract.
+# Mosm
 
-## Getting started
+Combined Median and OSM smart contract. Effectively, this combines the [median](https://github.com/chronicleprotocol/medianite) and [osm](https://github.com/makerdao/osm) contracts into a single contract so that we can realize a cost savings by changing the [contract-to-contract](https://github.com/makerdao/osm/blob/master/src/osm.sol#L133) call in `poke()`
+
+```
+function poke() {
+        (bytes32 wut, bool ok) = DSValue(src).peek();
+        ...
+}
+```
+
+to an [internal](https://github.com/chronicleprotocol/mosm/blob/main/src/mosm.sol#L251) call:
+
+```
+function osm_poke() {
+        (uint256 wut, bool ok) = this.peek();
+        ...
+}
+```
+
+## Build and test
 
 To build the contract from source do
 
@@ -9,13 +26,13 @@ To build the contract from source do
 make all
 ```
 
-In a separate terminal window, you'll want to get a testchain running:
+In a separate terminal window, you'll want to get a testchain running.
 
 ```
 dapp testnet --accounts 13
 ```
 
-will start a local testnet with 13 accounts that will be used for feeds. Export all the `ETH_*` vars, e.g. `ETH_FROM`, `ETH_KEYSTORE`, etc into your environment.
+will start a local testnet with 13 accounts that will be used for feeds. Export all your `ETH_*` vars, e.g. `ETH_FROM`, `ETH_KEYSTORE`, etc into your environment.
 
 Then, do
 
