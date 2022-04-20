@@ -1,6 +1,6 @@
 # Mosm
 
-Combined Median and OSM smart contract. Effectively, this combines the [median](https://github.com/chronicleprotocol/medianite) and [osm](https://github.com/makerdao/osm) contracts into a single contract so that we can realize a cost savings by changing the [contract-to-contract](https://github.com/makerdao/osm/blob/master/src/osm.sol#L133) call in `poke()`
+Combined Median and OSM smart contract. Effectively, this combines the [median](https://github.com/chronicleprotocol/medianite) and [osm](https://github.com/makerdao/osm) contracts into a single contract so that we can realize a cost savings by changing the [contract-to-contract](https://github.com/makerdao/osm/blob/e36c874b4e14fba860e48c0cf99cd600c0c59efa/src/osm.sol#L133) call in `poke()`
 
 ```
 function poke() {
@@ -9,7 +9,7 @@ function poke() {
 }
 ```
 
-to an [internal](https://github.com/chronicleprotocol/mosm/blob/main/src/mosm.sol#L251) call:
+to an [internal](https://github.com/chronicleprotocol/mosm/blob/520226e71bbdf3c74c19688ac1006875c3bca35e/src/mosm.sol#L251) call:
 
 ```
 function osm_poke() {
