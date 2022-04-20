@@ -178,6 +178,11 @@ contract Mosm is LibNote {
     }
 //} end:Median
 
+
+// NOTE(jamesr) For any name collisions between OSM and Median embedded
+// contracts, I've prefixed the OSM-specific names with 'osm_'. E.g. rely()
+// becomes osm_rely(), poke() become osm_poke(), etc.
+
 // contract OSM {
     mapping (address => uint) public osm_wards;
     function osm_rely(address usr) external note auth { osm_wards[usr] = 1; }
