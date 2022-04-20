@@ -60,15 +60,21 @@ function hash {
 
 function join { local IFS=","; echo "$*"; }
 
-mapfile -t accounts < <(seth rpc eth_accounts)
+if [ -z "$GET_ACCOUNTS_FROM_ETH_KEYSTORE" ]; then
+    mapfile -t accounts < <(seth rpc eth_accounts)
 
-minaccounts=1
-[[ ${#accounts[@]} -ge "$minaccounts" ]] || {
-    echo "You need at least $minaccounts accounts"
-    exit 1
-}
+    minaccounts=1
+    [[ ${#accounts[@]} -ge "$minaccounts" ]] || {
+        echo "You need at least $minaccounts accounts"
+        exit 1
+    }
+else
+    # This lets you pull accounts from a real keystore, like for deploys to testnets
+    mapfile -t accounts < <(ethsign ls | grep -v $ETH_FROM | awk '{print $1}')
+fi
 
 if [ -z "$ETH_FROM" ]; then
+    echo "No ETH_* env vars set. Setting them up for testchain."
     ETH_GAS=6000000
     ETH_KEYSTORE=~/.dapp/testnet/8545/keystore
     ETH_PASSWORD=./empty
@@ -77,10 +83,12 @@ if [ -z "$ETH_FROM" ]; then
     export ETH_FROM ETH_KEYSTORE ETH_PASSWORD ETH_GAS ETH_RPC_ACCOUNTS
 fi
 
-(set -x; seth send "$median" 'setBar(uint256)' "$(seth --to-word ${#accounts[@]})")
-echo "Lifting ${#accounts[@]} accounts"
-acc=$(echo "${accounts[@]}" | tr ' ' ',')
-(set -x; seth send "$median" 'lift(address[] memory)' "[$acc]")
+if [ -z "$SKIP_MEDIAN_SETUP" ]; then
+    (set -x; seth send "$median" 'setBar(uint256)' "$(seth --to-word ${#accounts[@]})")
+    echo "Lifting ${#accounts[@]} accounts"
+    acc=$(echo "${accounts[@]}" | tr ' ' ',')
+    (set -x; seth send "$median" 'lift(address[] memory)' "[$acc]")
+fi
 
 echo "Median: $median"
 i=1
@@ -89,8 +97,9 @@ for acc in "${accounts[@]}"; do
     price=$((250 + i))
     i=$((i + 1))
     hash=$(hash "$pair" "$price" "$ts")
-    sig=$(ethsign msg --from "$acc" --data "$hash" --passphrase-file "$ETH_PASSWORD")
-    echo "ethsign msg --from \"$acc\" --data \"$hash\" --passphrase-file \"$ETH_PASSWORD\""
+    empty_passphrase_file='./empty'
+    sig=$(ethsign msg --from "$acc" --data "$hash" --passphrase-file "$empty_passphrase_file")
+    echo "ethsign msg --from \"$acc\" --data \"$hash\" --passphrase-file \"$empty_passphrase_file\""
     res=$(sed 's/^0x//' <<< "$sig")
     r=${res:0:64}
     s=${res:64:64}
