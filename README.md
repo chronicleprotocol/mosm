@@ -69,3 +69,16 @@ By default `test_median.sh` will look for local testchain accounts to act as fee
 ```
 GET_ACCOUNTS_FROM_ETH_KEYSTORE=y ./test_median.sh ETHUSD 0x09672B2a62Db1cd4cCE379bdde5BF41931177A72
 ```
+
+### Gas efficiency
+
+Compared the above merged contract against a traditional OSM contract deployed on Rinkeby
+
+[0xa65458c2d757d790f5a79968e2790f9f47ff4165](https://rinkeby.etherscan.io/address/0xa65458c2d757d790f5a79968e2790f9f47ff4165#code)
+
+and found that the merged contract is `5.64%` cheaper gas-wise than the existing non-merged contract configuration:
+
+```
+Merged/gasUsed:        45971
+Non-merged/gasUsed:    48719
+```
