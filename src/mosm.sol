@@ -48,14 +48,19 @@ contract LibNote {
 
 
 contract Mosm is LibNote {
+    // Authorized users
+    mapping (bytes32 => mapping (address => uint)) public wards;
+
+    // Whitelisted feed readers, set by an auth
+    mapping (bytes32 => mapping (address => uint256)) public bud;
 
 // contract Median {
     // --- Auth ---
-    mapping (address => uint) public wards;
-    function rely(address usr) external note auth { wards[usr] = 1; }
-    function deny(address usr) external note auth { wards[usr] = 0; }
-    modifier auth {
-        require(wards[msg.sender] == 1, "Median/not-authorized");
+    function median_rely(address usr) external note median_auth { wards["median"][usr] = 1; }
+    function median_deny(address usr) external note median_auth { wards["median"][usr] = 0; }
+
+    modifier median_auth {
+        require(wards["median"][msg.sender] == 1, "Median/not-authorized");
         _;
     }
 
@@ -67,29 +72,27 @@ contract Mosm is LibNote {
     // Authorized oracles, set by an auth
     mapping (address => uint256) public orcl;
 
-    // Whitelisted contracts, set by an auth
-    mapping (address => uint256) public bud;
-
     // Mapping for at most 256 oracles
     mapping (uint8 => address) public slot;
 
-    modifier toll { require(bud[msg.sender] == 1, "Median/contract-not-whitelisted"); _;}
+    modifier toll { require(bud["median"][msg.sender] == 1, "Median/contract-not-whitelisted"); _;}
 
     event LogMedianPrice(uint256 val, uint256 age);
 
     //Set type of Oracle
     constructor() public {
-        wards[msg.sender] = 1;
-        osm_wards[msg.sender] = 1;
-        bud[address(this)] = 1; // Because osm_poke() makes this call internally TODO ditch this entirely?
+        wards["median"][msg.sender] = 1;
+        wards["osm"][msg.sender] = 1;
+        bud["median"][address(this)] = 1; // Deployer by default gets read access
+        bud["osm"][msg.sender] = 1;
     }
 
-    function read() external view toll returns (uint256) {
+    function median_read() external view toll returns (uint256) {
         require(val > 0, "Median/invalid-price-feed");
         return val;
     }
 
-    function peek() external view toll returns (uint256,bool) {
+    function median_peek() external view toll returns (uint256,bool) {
         return (val, val > 0);
     }
 
@@ -100,7 +103,7 @@ contract Mosm is LibNote {
         );
     }
 
-    function poke(
+    function median_poke(
         uint256[] calldata val_, uint256[] calldata age_,
         uint8[] calldata v, bytes32[] calldata r, bytes32[] calldata s) external
     {
@@ -132,7 +135,7 @@ contract Mosm is LibNote {
         emit LogMedianPrice(val, age);
     }
 
-    function lift(address[] calldata a) external note auth {
+    function lift(address[] calldata a) external note median_auth {
         for (uint i = 0; i < a.length; i++) {
             require(a[i] != address(0), "Median/no-oracle-0");
             uint8 s = uint8(uint256(a[i]) >> 152);
@@ -142,53 +145,47 @@ contract Mosm is LibNote {
         }
     }
 
-    function drop(address[] calldata a) external note auth {
+    function drop(address[] calldata a) external note median_auth {
        for (uint i = 0; i < a.length; i++) {
             orcl[a[i]] = 0;
             slot[uint8(uint256(a[i]) >> 152)] = address(0);
        }
     }
 
-    function setBar(uint256 bar_) external note auth {
+    function setBar(uint256 bar_) external note median_auth {
         require(bar_ > 0, "Median/quorum-is-zero");
         require(bar_ % 2 != 0, "Median/quorum-not-odd-number");
         bar = bar_;
     }
 
-    function kiss(address a) external note auth {
+    function median_kiss(address a) external note median_auth {
         require(a != address(0), "Median/no-contract-0");
-        bud[a] = 1;
+        bud["median"][a] = 1;
     }
 
-    function diss(address a) external note auth {
-        bud[a] = 0;
+    function median_diss(address a) external note median_auth {
+        bud["median"][a] = 0;
     }
 
-    function kiss(address[] calldata a) external note auth {
+    function median_kiss(address[] calldata a) external note median_auth {
         for(uint i = 0; i < a.length; i++) {
             require(a[i] != address(0), "Median/no-contract-0");
-            bud[a[i]] = 1;
+            bud["median"][a[i]] = 1;
         }
     }
 
-    function diss(address[] calldata a) external note auth {
+    function median_diss(address[] calldata a) external note median_auth {
         for(uint i = 0; i < a.length; i++) {
-            bud[a[i]] = 0;
+            bud["median"][a[i]] = 0;
         }
     }
-//} end:Median
-
-
-// NOTE(jamesr) For any name collisions between OSM and Median embedded
-// contracts, I've prefixed the OSM-specific names with 'osm_'. E.g. rely()
-// becomes osm_rely(), poke() become osm_poke(), etc.
+//} contract Median
 
 // contract OSM {
-    mapping (address => uint) public osm_wards;
-    function osm_rely(address usr) external note auth { osm_wards[usr] = 1; }
-    function osm_deny(address usr) external note auth { osm_wards[usr] = 0; }
+    function osm_rely(address usr) external note osm_auth { wards["osm"][usr] = 1; }
+    function osm_deny(address usr) external note osm_auth { wards["osm"][usr] = 0; }
     modifier osm_auth {
-        require(osm_wards[msg.sender] == 1, "OSM/not-authorized");
+        require(wards["osm"][msg.sender] == 1, "OSM/not-authorized");
         _;
     }
 
@@ -214,16 +211,15 @@ contract Mosm is LibNote {
     Feed cur;
     Feed nxt;
 
-    // Whitelisted contracts, set by an auth
-    mapping (address => uint256) public osm_bud;
-    modifier osm_toll { require(osm_bud[msg.sender] == 1, "OSM/contract-not-whitelisted"); _; }
+    modifier osm_toll { require(bud["osm"][msg.sender] == 1, "OSM/contract-not-whitelisted"); _; }
 
     event LogValue(bytes32 val);
 
-    function stop() external note auth {
+    function stop() external note osm_auth {
         stopped = 1;
     }
-    function start() external note auth {
+
+    function start() external note osm_auth {
         stopped = 0;
     }
 
@@ -250,10 +246,10 @@ contract Mosm is LibNote {
         return era() >= add(zzz, hop);
     }
 
-    function osm_poke() external note stoppable {
+    function poke() external note stoppable {
         require(pass(), "OSM/not-passed");
-        // Ask the Median side of the contract what the current price is...
-        (uint256 wut, bool ok) = this.peek();
+        // Ask the Median side of the contract for the current price
+        (uint256 wut, bool ok) = this.median_peek();
         if (ok) {
             cur = nxt;
             nxt = Feed(uint128(wut), 1);
@@ -262,7 +258,7 @@ contract Mosm is LibNote {
         }
     }
 
-    function osm_peek() external view osm_toll returns (bytes32,bool) {
+    function peek() external view osm_toll returns (bytes32,bool) {
         return (bytes32(uint(cur.val)), cur.has == 1);
     }
 
@@ -270,44 +266,44 @@ contract Mosm is LibNote {
         return (bytes32(uint(nxt.val)), nxt.has == 1);
     }
 
-    function osm_read() external view osm_toll returns (bytes32) {
+    function read() external view osm_toll returns (bytes32) {
         require(cur.has == 1, "OSM/no-current-value");
         return (bytes32(uint(cur.val)));
     }
 
-    function osm_kiss(address a) external note osm_auth {
+    function kiss(address a) external note osm_auth {
         require(a != address(0), "OSM/no-contract-0");
-        osm_bud[a] = 1;
+        bud["osm"][a] = 1;
     }
 
-    function osm_diss(address a) external note osm_auth {
-        osm_bud[a] = 0;
+    function diss(address a) external note osm_auth {
+        bud["osm"][a] = 0;
     }
 
-    function osm_kiss(address[] calldata a) external note osm_auth {
+    function kiss(address[] calldata a) external note osm_auth {
         for(uint i = 0; i < a.length; i++) {
             require(a[i] != address(0), "OSM/no-contract-0");
-            osm_bud[a[i]] = 1;
+            bud["osm"][a[i]] = 1;
         }
     }
 
-    function osm_diss(address[] calldata a) external note osm_auth {
+    function diss(address[] calldata a) external note osm_auth {
         for(uint i = 0; i < a.length; i++) {
-            osm_bud[a[i]] = 0;
+            bud["osm"][a[i]] = 0;
         }
     }
-//} end:OSM
+//} contract OSM
 
 }
 
-// Append new specific contracts from this point
-contract MosmETHUSD is Mosm {
-    bytes32 public constant wat = "ETHUSD";
-
-    function recover(uint256 val_, uint256 age_, uint8 v, bytes32 r, bytes32 s) internal pure returns (address) {
-        return ecrecover(
-            keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked(val_, age_, wat)))),
-            v, r, s
-        );
-    }
-}
+/////// Create a new deploy by uncommenting the below and modifying wat ///////
+// contract MosmETHUSD is Mosm {
+//     bytes32 public constant wat = "ETHUSD";
+//
+//     function recover(uint256 val_, uint256 age_, uint8 v, bytes32 r, bytes32 s) internal pure returns (address) {
+//         return ecrecover(
+//             keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked(val_, age_, wat)))),
+//             v, r, s
+//         );
+//     }
+// }

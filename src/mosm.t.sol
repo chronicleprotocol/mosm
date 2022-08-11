@@ -10,72 +10,36 @@ interface Hevm {
     function warp(uint256) external;
 }
 
-contract UnauthorizedPeek {
+contract Unauthorized {
     Mosm m;
     constructor(Mosm m_) public {
         m = m_;
     }
-    function doPeek() public view returns (uint256,bool) {
-        return m.peek();
+    function doMedianPeek() public view returns (uint256,bool) {
+        return m.median_peek();
     }
-    function doRead() public view returns (uint256) {
-        return m.read();
+    function doPeep() public view returns (bytes32,bool) {
+        return m.peep();
+    }
+    function doOsmPeek() public view returns (bytes32,bool) {
+        return m.peek();
     }
 }
 
 contract MosmTest is DSTest {
     Mosm mosm;
-    UnauthorizedPeek u;
-
+    Unauthorized u;
     Hevm hevm;
+    uint256 testprice = 258679000000000000000;
 
     function setUp() public {
         mosm = new Mosm();
-        u =  new UnauthorizedPeek(mosm);
-
-        // OSM specific
-        hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);//get hevm instance
+        u = new Unauthorized(mosm);
+        hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
     }
 
-    function test_Median_slot() public {
-        address[] memory a = new address[](1);
-        a[0] = address(0x0a00000000000000000000000000000000000000);
-        address[] memory b = new address[](1);
-        b[0] = address(0x0B00000000000000000000000000000000000000);
-        mosm.lift(a);
-        mosm.lift(b);
-        mosm.drop(a);
-        mosm.lift(a);
-    }
-
-    function testFail_Median_slot() public {
-        address[] memory a = new address[](1);
-        a[0] = address(0x0a00000000000000000000000000000000000000);
-        address[] memory b = new address[](1);
-        b[0] = address(0x0A11111111111111111111111111111111111111);
-        mosm.lift(a);
-        mosm.lift(b);
-    }
-
-    function test_Mosm() public {
-
-        //address payable [15] memory orcl = [
-        //    0x2d6691a7Ca09FcFC8a069953AD4Ba4De11DbFFd6,
-        //    0xEF7a293Adaec73c5E134040DDAd13a15CEB7231A,
-        //    0xEd1fBB08C70D1d510cF6C6a8B31f69917F0eCd46,
-        //    0xd4D2CBda7CA421A68aFdb72f16Ad38b8f0Ea3199,
-        //    0x94e71Afc1C876762aF8aaEd569596E6Fe2d42d86,
-        //    0x1379F663AE24cFD7cDaad6d8E0fa0dBf2F7D51fb,
-        //    0x2a4B7b59323B8bC4a78d04a88E853469ED6ea1d4,
-        //    0x8797FDdF08612100a8B821CD52f8B71dB75Fa9aC,
-        //    0xdB3E64F17f5E6Af7161dCd01401464835136Af6C,
-        //    0xCD63177834dDD54aDdD2d9F9845042A21360023A,
-        //    0x832A0149Beea1e4cb7175b3062Edd10E1b40A951,
-        //    0xb158f2EC0E44c7cE533C5e41ca5FB09575f1e210,
-        //    0x555faE91fb4b03473704045737b8b5F628E9E5E5,
-        //    0x8b8668B708D4edee400Dfd00e9A9038781eb5904,
-        //    0x06B80b4034FEc8566857f0B9180b025e933093e4
-        //];
+    function medianInit() public returns 
+        (uint256[] memory, uint256[] memory, bytes32[] memory, bytes32[] memory, uint8[] memory) {
 
         address[] memory orcl = new address[](15);
         orcl[0] = address(0x2d6691a7Ca09FcFC8a069953AD4Ba4De11DbFFd6);
@@ -183,40 +147,200 @@ contract MosmTest is DSTest {
         s[13] = bytes32(0x69dd6213ef7c960ce7123a50dabd2a45d477c8ae3eca2bb860ec75902a23ca81);
         s[14] = bytes32(0x6573f1f517c89503a1116377f7ac80cbfe2b24bbc5dc1147d03da725198f8cc5);
 
-        // Test pure Median side
         mosm.setBar(15);
-
         mosm.lift(orcl);
 
+        return (price, ts, r, s, v);
+    }
+
+    function testMedianSlot() public {
+        address[] memory a = new address[](1);
+        a[0] = address(0x0a00000000000000000000000000000000000000);
+        address[] memory b = new address[](1);
+        b[0] = address(0x0B00000000000000000000000000000000000000);
+        mosm.lift(a);
+        mosm.lift(b);
+        mosm.drop(a);
+        mosm.lift(a);
+    }
+
+    function testFailMedianSlot() public {
+        address[] memory a = new address[](1);
+        a[0] = address(0x0a00000000000000000000000000000000000000);
+        address[] memory b = new address[](1);
+        b[0] = address(0x0A11111111111111111111111111111111111111);
+        mosm.lift(a);
+        mosm.lift(b);
+    }
+
+    function testMedian() public {
+        (uint256[] memory price,
+         uint256[] memory ts,
+         bytes32[] memory r,
+         bytes32[] memory s,
+         uint8[] memory v) = medianInit();
+
+        // Whitelist addresses
         address[] memory f = new address[](2);
         f[0] = address(this);
         f[1] = address(u);
-        mosm.kiss(f);
+        mosm.median_kiss(f);
 
+        // Poke median price
         uint256 gas = gasleft();
-        mosm.poke(price, ts, v, r, s);
+        mosm.median_poke(price, ts, v, r, s);
         gas = gas - gasleft();
         emit log_named_uint("gas", gas);
-        (uint256 val, bool ok) = mosm.peek();
+        (uint256 val, bool ok) = mosm.median_peek();
         uint256 val_osm_check = val;
 
+        // Verify whitelisted can read
         emit log_named_decimal_uint("median", val, 18);
-        (val, ok) = u.doPeek();
+        (val, ok) = u.doMedianPeek();
         assertTrue(ok);
 
-        mosm.osm_kiss(address(this));
+        // Update OSM and verify it matches median
+        hevm.warp(uint(mosm.hop())); 
+        mosm.poke();            
+        bytes32 bval;
+        (bval, ok) = mosm.peek();
+        assertTrue(uint256(bval) == 0);
+        (bval, ok) = mosm.peep();
+        assertTrue(uint256(bval) == testprice);
 
-        hevm.warp(uint(mosm.hop()));                             // warp 1 hop
-        mosm.osm_poke();                                         // cur == 0
-        (bytes32 val1, bool ok1) = mosm.osm_peek();
-        assertTrue(uint256(val1) == 0);
-
-        hevm.warp(uint(mosm.hop())*2);                           //warp 2 hop
-        mosm.osm_poke();                                         // osm.cur to whatever is in Median side
-        (val1, ok1) = mosm.osm_peek();
-        assertTrue(ok1);
-        assertTrue( val_osm_check == uint256(val1) );
+        hevm.warp(uint(mosm.hop())*2);
+        mosm.poke();             
+        (bval, ok) = mosm.peek();
+        assertTrue(ok);
+        assertTrue(val_osm_check == uint256(bval));
     }
 
-    //TODO(jamesr) Integrate remaining OSM tests https://github.com/makerdao/osm/blob/master/src/osm.t.sol
+    function testFailMedianPoke() public {
+        (uint256[] memory price,
+         uint256[] memory ts,
+         bytes32[] memory r,
+         bytes32[] memory s,
+         uint8[] memory v) = medianInit();
+
+        price[7] = 0x1; // Alter one of the prices
+        mosm.median_poke(price, ts, v, r, s);
+    }
+
+    // OSM tests pulled from https://github.com/makerdao/osm/blob/master/src/osm.t.sol
+    function testOsmSetHop() public {
+        assertEq(uint(mosm.hop()), 3600);
+        mosm.step(uint16(7200));        
+        assertEq(uint(mosm.hop()), 7200); 
+    }
+
+    function testFailOsmSetHopZero() public {
+        mosm.step(uint16(0));
+    }
+
+    function testOsmVoidAndPoke() public {
+        (uint256[] memory price,
+         uint256[] memory ts,
+         bytes32[] memory r,
+         bytes32[] memory s,
+         uint8[] memory v) = medianInit();
+        mosm.median_poke(price, ts, v, r, s);
+
+        assertTrue(mosm.stopped() == 0);
+
+        // Initial OSM poke, current value is 0, next value is Median
+        hevm.warp(uint(mosm.hop() * 2));
+        mosm.poke();
+        (bytes32 val, bool has) = mosm.peek();
+        assertEq(uint(val), 0);
+        assertTrue(!has);
+
+        (val, has) = mosm.peep();
+        assertEq(uint(val), testprice);
+        assertTrue(has);
+
+        // Second OSM poke, current value is Median
+        hevm.warp(uint(mosm.hop() * 3));
+        mosm.poke();
+        (val, has) = mosm.peek();
+        assertEq(uint(val), testprice);
+        assertTrue(has);
+
+        mosm.void();
+        assertTrue(mosm.stopped() == 1);
+        (val, has) = mosm.peek();
+        assertEq(uint(val), 0);
+        assertTrue(!has);
+        (val, has) = mosm.peep();
+        assertEq(uint(val), 0);
+        assertTrue(!has);
+    }
+
+    function testFailOsmPoke() public {
+        medianInit();
+        hevm.warp(uint(mosm.hop() - 1));
+        mosm.poke();
+    }
+
+    function testFailOsmWhitelistPeep() public view {
+        u.doPeep();
+    }
+
+    function testOsmWhitelistPeep() public {
+        (uint256[] memory price,
+         uint256[] memory ts,
+         bytes32[] memory r,
+         bytes32[] memory s,
+         uint8[] memory v) = medianInit();
+        mosm.median_poke(price, ts, v, r, s);
+
+        hevm.warp(uint(mosm.hop() * 2));
+        mosm.poke();
+        (bytes32 val, bool has) = mosm.peek();
+        assertEq(uint(val), 0);
+        assertTrue(!has);
+
+        mosm.kiss(address(u));                       
+        (val, has) = u.doPeep();
+        assertEq(uint(val), testprice);     
+        assertTrue(has);                   
+    }
+
+    function testFailOsmWhitelistPeek() public view {
+        u.doOsmPeek();
+    }
+
+    function testOsmWhitelistPeek() public {
+        (uint256[] memory price,
+         uint256[] memory ts,
+         bytes32[] memory r,
+         bytes32[] memory s,
+         uint8[] memory v) = medianInit();
+
+        mosm.median_poke(price, ts, v, r, s);
+        hevm.warp(uint(mosm.hop() * 2));
+        mosm.poke();
+        (bytes32 val, bool has) = mosm.peek();
+        assertEq(uint(val), 0);
+        assertTrue(!has);
+        hevm.warp(uint(mosm.hop() * 3));
+        mosm.poke();
+
+        mosm.kiss(address(u));                       
+        (val, has) = u.doOsmPeek();
+        assertEq(uint(val), testprice);     
+        assertTrue(has);                   
+    }
+
+    function testOsmKiss() public {
+        assertTrue(mosm.bud("osm",address(u)) == 0);
+        mosm.kiss(address(u));                               
+        assertTrue(mosm.bud("osm",address(u)) == 1);
+    }
+
+    function testOsmDiss() public {
+        mosm.kiss(address(u));
+        assertTrue(mosm.bud("osm",address(u)) == 1);
+        mosm.diss(address(u));
+        assertTrue(mosm.bud("osm", address(u)) == 0);
+    }
 }
