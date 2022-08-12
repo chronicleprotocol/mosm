@@ -38,7 +38,7 @@ contract MosmTest is DSTest {
         hevm = Hevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
     }
 
-    function medianInit() public returns 
+    function medianInit() public returns
         (uint256[] memory, uint256[] memory, bytes32[] memory, bytes32[] memory, uint8[] memory) {
 
         address[] memory orcl = new address[](15);
@@ -200,16 +200,16 @@ contract MosmTest is DSTest {
         assertTrue(ok);
 
         // Update OSM and verify it matches median
-        hevm.warp(uint(mosm.hop())); 
-        mosm.poke();            
+        hevm.warp(uint(mosm.hop()));
+        mosm.poke();
         bytes32 bval;
         (bval, ok) = mosm.peek();
         assertTrue(uint256(bval) == 0);
         (bval, ok) = mosm.peep();
         assertTrue(uint256(bval) == testprice);
 
-        hevm.warp(uint(mosm.hop())*2);
-        mosm.poke();             
+        hevm.warp(uint(mosm.hop())*2+1);
+        mosm.poke();
         (bval, ok) = mosm.peek();
         assertTrue(ok);
         assertTrue(val_osm_check == uint256(bval));
@@ -229,8 +229,8 @@ contract MosmTest is DSTest {
     // OSM tests pulled from https://github.com/makerdao/osm/blob/master/src/osm.t.sol
     function testOsmSetHop() public {
         assertEq(uint(mosm.hop()), 3600);
-        mosm.step(uint16(7200));        
-        assertEq(uint(mosm.hop()), 7200); 
+        mosm.step(uint16(7200));
+        assertEq(uint(mosm.hop()), 7200);
     }
 
     function testFailOsmSetHopZero() public {
@@ -248,7 +248,7 @@ contract MosmTest is DSTest {
         assertTrue(mosm.stopped() == 0);
 
         // Initial OSM poke, current value is 0, next value is Median
-        hevm.warp(uint(mosm.hop() * 2));
+        hevm.warp(uint(mosm.hop()));
         mosm.poke();
         (bytes32 val, bool has) = mosm.peek();
         assertEq(uint(val), 0);
@@ -259,7 +259,7 @@ contract MosmTest is DSTest {
         assertTrue(has);
 
         // Second OSM poke, current value is Median
-        hevm.warp(uint(mosm.hop() * 3));
+        hevm.warp(uint(mosm.hop() * 2));
         mosm.poke();
         (val, has) = mosm.peek();
         assertEq(uint(val), testprice);
@@ -276,7 +276,14 @@ contract MosmTest is DSTest {
     }
 
     function testFailOsmPoke() public {
-        medianInit();
+        (uint256[] memory price,
+         uint256[] memory ts,
+         bytes32[] memory r,
+         bytes32[] memory s,
+         uint8[] memory v) = medianInit();
+        mosm.median_poke(price, ts, v, r, s);
+
+        mosm.poke();
         hevm.warp(uint(mosm.hop() - 1));
         mosm.poke();
     }
@@ -293,16 +300,16 @@ contract MosmTest is DSTest {
          uint8[] memory v) = medianInit();
         mosm.median_poke(price, ts, v, r, s);
 
-        hevm.warp(uint(mosm.hop() * 2));
+        hevm.warp(uint(mosm.hop()));
         mosm.poke();
         (bytes32 val, bool has) = mosm.peek();
         assertEq(uint(val), 0);
         assertTrue(!has);
 
-        mosm.kiss(address(u));                       
+        mosm.kiss(address(u));
         (val, has) = u.doPeep();
-        assertEq(uint(val), testprice);     
-        assertTrue(has);                   
+        assertEq(uint(val), testprice);
+        assertTrue(has);
     }
 
     function testFailOsmWhitelistPeek() public view {
@@ -317,23 +324,23 @@ contract MosmTest is DSTest {
          uint8[] memory v) = medianInit();
 
         mosm.median_poke(price, ts, v, r, s);
-        hevm.warp(uint(mosm.hop() * 2));
+        hevm.warp(uint(mosm.hop()));
         mosm.poke();
         (bytes32 val, bool has) = mosm.peek();
         assertEq(uint(val), 0);
         assertTrue(!has);
-        hevm.warp(uint(mosm.hop() * 3));
+        hevm.warp(uint(mosm.hop() * 2));
         mosm.poke();
 
-        mosm.kiss(address(u));                       
+        mosm.kiss(address(u));
         (val, has) = u.doOsmPeek();
-        assertEq(uint(val), testprice);     
-        assertTrue(has);                   
+        assertEq(uint(val), testprice);
+        assertTrue(has);
     }
 
     function testOsmKiss() public {
         assertTrue(mosm.bud("osm",address(u)) == 0);
-        mosm.kiss(address(u));                               
+        mosm.kiss(address(u));
         assertTrue(mosm.bud("osm",address(u)) == 1);
     }
 
@@ -343,4 +350,45 @@ contract MosmTest is DSTest {
         mosm.diss(address(u));
         assertTrue(mosm.bud("osm", address(u)) == 0);
     }
+
+    function testOsmInterval() public {
+        (uint256[] memory price,
+         uint256[] memory ts,
+         bytes32[] memory r,
+         bytes32[] memory s,
+         uint8[] memory v) = medianInit();
+
+        mosm.median_poke(price, ts, v, r, s);
+
+        // Initial condition after deploy: You cannot poke if era() has not
+        // exceeded (zzz + hop)
+        (bool ok,) = address(mosm).call(abi.encodeWithSelector(0x18178358));
+        assertTrue(!ok);
+        
+        // Can poke after interval passes
+        hevm.warp(uint(mosm.hop()));
+        mosm.poke();
+    
+        // Cannot poke again within interval
+        hevm.warp(uint(mosm.hop()) + 1);
+        (ok,) = address(mosm).call(abi.encodeWithSelector(0x18178358));
+        assertTrue(!ok);
+
+        // Can skip intervals and poke further out into the future
+        hevm.warp(uint(mosm.hop())*3);
+        mosm.poke();
+
+        // You can poke in the future...
+        hevm.warp((uint(mosm.hop())*5)-1);
+        mosm.poke();
+        // ... however, you must now wait the full interval before you poke
+        // again (no top-of-the-hour stretching/contracting).
+        hevm.warp(uint(mosm.hop())*5);
+        (ok,) = address(mosm).call(abi.encodeWithSelector(0x18178358));
+        assertTrue(!ok);
+
+        hevm.warp(uint(mosm.hop())*6);
+        mosm.poke();
+    }
+
 }

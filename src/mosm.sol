@@ -111,7 +111,7 @@ contract Mosm is LibNote {
 
         uint256 bloom = 0;
         uint256 last = 0;
-        uint256 zzz = age;
+        uint256 snooze = age;
 
         for (uint i = 0; i < val_.length; i++) {
             // Validate the values were signed by an authorized oracle
@@ -119,7 +119,7 @@ contract Mosm is LibNote {
             // Check that signer is an oracle
             require(orcl[signer] == 1, "Median/invalid-oracle");
             // Price feed age greater than last medianizer age
-            require(age_[i] > zzz, "Median/stale-message");
+            require(age_[i] > snooze, "Median/stale-message");
             // Check for ordered values
             require(val_[i] >= last, "Median/messages-not-in-order");
             last = val_[i];
@@ -227,11 +227,6 @@ contract Mosm is LibNote {
         return block.timestamp;
     }
 
-    function prev(uint ts) internal view returns (uint64) {
-        require(hop != 0, "OSM/hop-is-zero");
-        return uint64(ts - (ts % hop));
-    }
-
     function step(uint16 ts) external osm_auth {
         require(ts > 0, "OSM/ts-is-zero");
         hop = ts;
@@ -253,7 +248,7 @@ contract Mosm is LibNote {
         if (ok) {
             cur = nxt;
             nxt = Feed(uint128(wut), 1);
-            zzz = prev(era());
+            zzz = uint64(era());
             emit LogValue(bytes32(uint(cur.val)));
         }
     }
