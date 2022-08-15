@@ -237,14 +237,25 @@ contract Mosm is LibNote {
         stopped = 1;
     }
 
-    function pass() public view returns (bool ok) {
+    function pass() public view returns (bool) {
         return era() >= add(zzz, hop);
+    }
+
+    function noop(uint256 wut) public view returns (bool) {
+        bool has = cur.has == 1 && nxt.has == 1;
+        bool allequal = cur.val == nxt.val && cur.val == uint128(wut);
+        return has && allequal;
     }
 
     function poke() external note stoppable {
         require(pass(), "OSM/not-passed");
+
         // Ask the Median side of the contract for the current price
         (uint256 wut, bool ok) = this.median_peek();
+
+        // If there is no change save some gas
+        require(!noop(wut), 'OSM/no-op');
+
         if (ok) {
             cur = nxt;
             nxt = Feed(uint128(wut), 1);
