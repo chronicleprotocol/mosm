@@ -52,7 +52,7 @@ function hash {
     wat=$(seth --to-bytes32 "$(seth --from-ascii "$1")")    
     wad=$(seth --to-wei "$2" eth)
     wad=$(seth --to-word "$wad")
-    zzz=$(seth --to-word "$3")
+    zzz=$(seth --to-word "$3" | sed 's/0\{56\}//g')
 
     hexcat=$(echo "$wad$zzz$wat" | sed 's/0x//g')
     seth keccak 0x"$hexcat"
@@ -91,8 +91,10 @@ if [ -z "$SKIP_MEDIAN_SETUP" ]; then
 fi
 
 echo "Median: $median"
+echo "Pair:   $pair"
+
 i=1
-ts=1549168920
+ts=$(date -u +"%s")
 if [ ! -z "$START_PRICE_FROM" ]; then
     startprice=$START_PRICE_FROM
 else
@@ -113,7 +115,8 @@ for acc in "${accounts[@]}"; do
     
     price=$(seth --to-wei "$price" eth)
     prices+=("$(seth --to-word "$price")")
-    tss+=("$(seth --to-word "$ts")")
+    tss+=("$(seth --to-word "$ts" | sed 's/0\{56\}//g')")
+    
     rs+=("0x$r")
     ss+=("0x$s")
     vs+=("$v")
@@ -141,7 +144,7 @@ if [ ! -z "$DUMP_PRICES_ONLY" ]; then
     echo "${allprices[@]}" | tr ',' '\n' | awk '{ print "price[" NR-1 "] = uint256(" $1 ");" }'
 
     echo '// -------------- age, a.k.a. ts:'
-    echo "${allts[@]}" | tr ',' '\n' | awk '{ print "ts[" NR-1 "] = uint256(" $1 ");" }'
+    echo "${allts[@]}" | tr ',' '\n' | awk '{ print "ts[" NR-1 "] = uint32(" $1 ");" }'
 
     echo '// ---------------- r:'
     echo "${allr[@]}" | tr ',' '\n' | awk '{ print "r[" NR-1 "] = bytes32(" $1 ");" }'
