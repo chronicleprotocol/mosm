@@ -302,7 +302,7 @@ contract Mosm is LibNote {
 
 }
 
-/////// Create a new deploy by uncommenting the below and modifying wat ///////
+//// Create new deploy: Uncomment the below and modify contract name + wat ////
 // contract MosmETHUSD is Mosm {
 //     bytes32 public constant wat = "ETHUSD";
 //

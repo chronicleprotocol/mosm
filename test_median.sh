@@ -8,9 +8,9 @@
 # dapp testnet --accounts 13
 
 # Terminal 2
-# dapp create MosmETHUSD
+# dapp create Mosm
 # ./test_median.sh $PAIR $MEDIAN_ADDRESS
-# ./test_median.sh ETHUSD 0xabc123
+# ./test_median.sh ethusd 0xabc123
 
 set -e
 
