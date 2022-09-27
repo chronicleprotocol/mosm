@@ -8,13 +8,12 @@
 # dapp testnet --accounts 13
 
 # Terminal 2
-# dapp create MosmETHUSD
+# dapp create Mosm
 # ./test_median.sh $PAIR $MEDIAN_ADDRESS
-# ./test_median.sh ETHUSD 0xabc123
+# ./test_median.sh ethusd 0xabc123
 
 set -e
 
-pair=ETHUSD
 usage() {
     echo "Usage: $0 <PAIR> <MOSM_ADDRESS>"
     echo "E.g.   $0 ETHUSD 0xdeadbeef"
@@ -27,6 +26,7 @@ usage() {
     usage
     exit 1
 }
+pair=$1
 median=$2
 
 chain=$(seth chain 2>/dev/null) || {
@@ -52,7 +52,7 @@ function hash {
     wat=$(seth --to-bytes32 "$(seth --from-ascii "$1")")    
     wad=$(seth --to-wei "$2" eth)
     wad=$(seth --to-word "$wad")
-    zzz=$(seth --to-word "$3")
+    zzz=$(seth --to-word "$3" | sed 's/0\{56\}//g')
 
     hexcat=$(echo "$wad$zzz$wat" | sed 's/0x//g')
     seth keccak 0x"$hexcat"
@@ -61,7 +61,7 @@ function hash {
 function join { local IFS=","; echo "$*"; }
 
 if [ -z "$GET_ACCOUNTS_FROM_ETH_KEYSTORE" ]; then
-    mapfile -t accounts < <(seth rpc eth_accounts)
+    mapfile -t accounts < <(seth rpc eth_accounts | xargs -L 1 seth --to-address)
 
     minaccounts=1
     [[ ${#accounts[@]} -ge "$minaccounts" ]] || {
@@ -91,10 +91,17 @@ if [ -z "$SKIP_MEDIAN_SETUP" ]; then
 fi
 
 echo "Median: $median"
+echo "Pair:   $pair"
+
 i=1
-ts=1549168920
+ts=$(date -u +"%s")
+if [ ! -z "$START_PRICE_FROM" ]; then
+    startprice=$START_PRICE_FROM
+else
+    startprice=250
+fi
 for acc in "${accounts[@]}"; do
-    price=$((250 + i))
+    price=$(($startprice + i))
     i=$((i + 1))
     hash=$(hash "$pair" "$price" "$ts")
     empty_passphrase_file='./empty'
@@ -108,7 +115,8 @@ for acc in "${accounts[@]}"; do
     
     price=$(seth --to-wei "$price" eth)
     prices+=("$(seth --to-word "$price")")
-    tss+=("$(seth --to-word "$ts")")
+    tss+=("$(seth --to-word "$ts" | sed 's/0\{56\}//g')")
+    
     rs+=("0x$r")
     ss+=("0x$s")
     vs+=("$v")
@@ -128,8 +136,31 @@ allr=$(join "${rs[@]}")
 alls=$(join "${ss[@]}")
 allv=$(join "${vs[@]}")
 
+if [ ! -z "$DUMP_PRICES_ONLY" ]; then
+    echo '// ----------- accounts:'
+    echo "${accounts[@]}" | tr ' ' '\n' | awk '{ print "orcl[" NR-1 "] = address(" $1 ");" }'
+
+    echo '// ----------- prices:'
+    echo "${allprices[@]}" | tr ',' '\n' | awk '{ print "price[" NR-1 "] = uint256(" $1 ");" }'
+
+    echo '// -------------- age, a.k.a. ts:'
+    echo "${allts[@]}" | tr ',' '\n' | awk '{ print "ts[" NR-1 "] = uint32(" $1 ");" }'
+
+    echo '// ---------------- r:'
+    echo "${allr[@]}" | tr ',' '\n' | awk '{ print "r[" NR-1 "] = bytes32(" $1 ");" }'
+
+    echo '// ---------------- s:'
+    echo "${alls[@]}" | tr ',' '\n' | awk '{ print "s[" NR-1 "] = bytes32(" $1 ");" }'
+
+    echo '// ---------------- v:'
+    echo "${allv[@]}" | tr ',' '\n' | \
+        sed 's/00000000000000000000000000000000000000000000000000000000000000//' | \
+        awk '{ print "v[" NR-1 "] = uint8(" $1 ");" }'
+    exit 0
+fi
+
 echo "Sending tx..."
-tx=$(set -x; seth send --async "$median" 'poke(uint256[] memory,uint256[] memory,uint8[] memory,bytes32[] memory,bytes32[] memory)' \
+tx=$(set -x; seth send --async "$median" 'median_poke(uint256[] memory,uint256[] memory,uint8[] memory,bytes32[] memory,bytes32[] memory)' \
 "[$allprices]" \
 "[$allts]" \
 "[$allv]" \
@@ -140,5 +171,5 @@ echo "TX: $tx"
 echo SUCCESS: "$(seth receipt "$tx" status)"
 echo GAS USED: "$(seth receipt "$tx" gasUsed)"
 
-(set -x; seth send "$median" 'kiss(address)' $ETH_FROM)
-(set -x; seth call "$median" 'peek()(uint,bool)')
+(set -x; seth send "$median" 'median_kiss(address)' $ETH_FROM)
+(set -x; seth call "$median" 'median_peek()(uint,bool)')
