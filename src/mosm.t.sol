@@ -486,7 +486,7 @@ contract MosmTest is DSTest {
         (ok,) = address(mosm).call(abi.encodeWithSelector(0x18178358));
         assertTrue(!ok);
 
-        // Can skip intervals and poke further out into the future
+        // Can skip intervals and poke in the future
         hevm.warp(uint(mosm.hop())*3);
         mosm.poke();
 
