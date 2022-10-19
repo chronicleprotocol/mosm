@@ -303,13 +303,15 @@ contract Mosm is LibNote {
 }
 
 //// Create new deploy: Uncomment the below and modify contract name + wat ////
-// contract MosmETHUSD is Mosm {
-//     bytes32 public constant wat = "ETHUSD";
-//
-//     function recover(uint256 val_, uint32 age_, uint8 v, bytes32 r, bytes32 s) internal pure returns (address) {
-//         return ecrecover(
-//             keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked(val_, age_, wat)))),
-//             v, r, s
-//         );
-//     }
-// }
+/*
+contract MosmETHUSD is Mosm {
+    bytes32 public constant wat = "ETHUSD";
+
+    function recover(uint256 val_, uint32 age_, uint8 v, bytes32 r, bytes32 s) internal pure returns (address) {
+        return ecrecover(
+            keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked(val_, age_, wat)))),
+            v, r, s
+        );
+    }
+}
+*/
