@@ -103,7 +103,8 @@ contract Mosm is LibNote {
         );
     }
 
-    function median_poke(
+    // Median
+    function poke(
         uint256[] calldata val_, uint32[] calldata age_,
         uint8[] calldata v, bytes32[] calldata r, bytes32[] calldata s) external
     {
@@ -247,6 +248,7 @@ contract Mosm is LibNote {
         return has && allequal;
     }
 
+    // OSM
     function poke() external note stoppable {
         require(pass(), "OSM/not-passed");
 

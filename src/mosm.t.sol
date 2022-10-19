@@ -299,7 +299,7 @@ contract MosmTest is DSTest {
 
         // Poke median price
         uint256 gas = gasleft();
-        mosm.median_poke(price, ts, v, r, s);
+        mosm.poke(price, ts, v, r, s);
         gas = gas - gasleft();
         emit log_named_uint("gas", gas);
         (uint256 val, bool ok) = mosm.median_peek();
@@ -334,7 +334,7 @@ contract MosmTest is DSTest {
          uint8[] memory v) = medianInit();
 
         price[7] = 0x1; // Alter one of the prices
-        mosm.median_poke(price, ts, v, r, s);
+        mosm.poke(price, ts, v, r, s);
     }
 
     // OSM tests pulled from https://github.com/makerdao/osm/blob/master/src/osm.t.sol
@@ -354,7 +354,7 @@ contract MosmTest is DSTest {
          bytes32[] memory r,
          bytes32[] memory s,
          uint8[] memory v) = medianInit();
-        mosm.median_poke(price, ts, v, r, s);
+        mosm.poke(price, ts, v, r, s);
 
         assertTrue(mosm.stopped() == 0);
 
@@ -392,7 +392,7 @@ contract MosmTest is DSTest {
          bytes32[] memory r,
          bytes32[] memory s,
          uint8[] memory v) = medianInit();
-        mosm.median_poke(price, ts, v, r, s);
+        mosm.poke(price, ts, v, r, s);
 
         mosm.poke();
         hevm.warp(uint(mosm.hop() - 1));
@@ -409,7 +409,7 @@ contract MosmTest is DSTest {
          bytes32[] memory r,
          bytes32[] memory s,
          uint8[] memory v) = medianInit();
-        mosm.median_poke(price, ts, v, r, s);
+        mosm.poke(price, ts, v, r, s);
 
         hevm.warp(uint(mosm.hop()));
         mosm.poke();
@@ -434,7 +434,7 @@ contract MosmTest is DSTest {
          bytes32[] memory s,
          uint8[] memory v) = medianInit();
 
-        mosm.median_poke(price, ts, v, r, s);
+        mosm.poke(price, ts, v, r, s);
         hevm.warp(uint(mosm.hop()));
         mosm.poke();
         (bytes32 val, bool has) = mosm.peek();
@@ -470,7 +470,7 @@ contract MosmTest is DSTest {
          bytes32[] memory s,
          uint8[] memory v) = medianInit();
 
-        mosm.median_poke(price, ts, v, r, s);
+        mosm.poke(price, ts, v, r, s);
 
         // Initial condition after deploy: You cannot poke if era() has not
         // exceeded (zzz + hop)
@@ -493,7 +493,7 @@ contract MosmTest is DSTest {
         // Update median price
         mosm.drop(orcl);
         (, price, ts, r, s, v) = medianInit2();
-        mosm.median_poke(price, ts, v, r, s);
+        mosm.poke(price, ts, v, r, s);
 
         // You can poke the future...
         hevm.warp((uint(mosm.hop())*5)-1);
