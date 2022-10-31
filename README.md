@@ -15,7 +15,7 @@ Note that all other behaviors that exist in the original implementations of Medi
 
 ### Name collisions
 
-The two contracts we've merged here shared some naming conventions. E.g. they both have a method named `poke()`. While we could have differentiated by call signatures, the conviction is that it's better to be explicit. Since OSM is the "public facing" contract, where collisions occurred we prefixed the Median-side functions. E.g. this contract retains the `poke()` method for OSM and `median_poke()` for Median.
+The two contracts we've merged here shared some naming conventions. E.g. they both have a method named `peek()`. Since OSM is the "public facing" contract, where collisions occurred we prefixed the Median-side functions. E.g. this contract retains the `peek()` method for OSM and `median_peek()` for Median.
 
 ## Build and test
 
