@@ -52,7 +52,7 @@ function hash {
     wat=$(seth --to-bytes32 "$(seth --from-ascii "$1")")    
     wad=$(seth --to-wei "$2" eth)
     wad=$(seth --to-word "$wad")
-    zzz=$(seth --to-word "$3" | sed 's/0\{56\}//g')
+    zzz=$(seth --to-word "$3")
 
     hexcat=$(echo "$wad$zzz$wat" | sed 's/0x//g')
     seth keccak 0x"$hexcat"
@@ -115,7 +115,7 @@ for acc in "${accounts[@]}"; do
     
     price=$(seth --to-wei "$price" eth)
     prices+=("$(seth --to-word "$price")")
-    tss+=("$(seth --to-word "$ts" | sed 's/0\{56\}//g')")
+    tss+=("$(seth --to-word $ts)")
     
     rs+=("0x$r")
     ss+=("0x$s")
@@ -144,7 +144,7 @@ if [ ! -z "$DUMP_PRICES_ONLY" ]; then
     echo "${allprices[@]}" | tr ',' '\n' | awk '{ print "price[" NR-1 "] = uint256(" $1 ");" }'
 
     echo '// -------------- age, a.k.a. ts:'
-    echo "${allts[@]}" | tr ',' '\n' | awk '{ print "ts[" NR-1 "] = uint32(" $1 ");" }'
+    echo "${allts[@]}" | tr ',' '\n' | awk '{ print "ts[" NR-1 "] = uint256(" $1 ");" }'
 
     echo '// ---------------- r:'
     echo "${allr[@]}" | tr ',' '\n' | awk '{ print "r[" NR-1 "] = bytes32(" $1 ");" }'
@@ -160,7 +160,7 @@ if [ ! -z "$DUMP_PRICES_ONLY" ]; then
 fi
 
 echo "Sending tx..."
-tx=$(set -x; seth send --async "$median" 'median_poke(uint256[] memory,uint256[] memory,uint8[] memory,bytes32[] memory,bytes32[] memory)' \
+tx=$(set -x; seth send --async "$median" 'poke(uint256[] memory,uint256[] memory,uint8[] memory,bytes32[] memory,bytes32[] memory)' \
 "[$allprices]" \
 "[$allts]" \
 "[$allv]" \
