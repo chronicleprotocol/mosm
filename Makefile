@@ -1,6 +1,7 @@
-all    :; dapp --use solc:0.5.10 build
-clean  :; dapp clean
-test   :; dapp --use solc:0.5.10 test -v
+all        :; dapp --use solc:0.5.10 build
+clean      :; dapp clean
+test       :; dapp --use solc:0.5.10 test -v
+test-forge :; forge test --use 0.5.10
 
 deploy: all
 	dapp create $$(grep -E 'contract Mosm.+ is Mosm' src/mosm.sol  | awk '{print $$2}')
