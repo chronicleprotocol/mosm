@@ -524,4 +524,49 @@ contract MosmTest is DSTest {
         assertTrue(!ok);
         assertTrue(mosm.noop(price[7]));
     }
+
+    function testAuditFeeds() public {
+        (address[] memory orcl,,,,,) = medianInit();
+        for(uint i = 0; i < mosm.lifted_length(); i++) {
+            assertTrue(mosm.lifted(i) == orcl[i]);
+            assertTrue(mosm.orcl(mosm.lifted(i)) == 1);
+        }
+    }
+
+    function testAuditFeedsAfterDrop() public {
+        (address[] memory orcl,,,,,) = medianInit();
+
+        address[] memory feeds = new address[](2);
+        feeds[0] = orcl[3];
+        feeds[1] = orcl[7];
+        mosm.drop(feeds);
+        assertTrue(mosm.orcl(orcl[3]) == 0);
+
+        feeds = new address[](1);
+        feeds[0] = orcl[3];
+        mosm.lift(feeds);
+
+        assertTrue(mosm.lifted(3) == orcl[3]);
+        assertTrue(mosm.lifted(mosm.lifted_length()-1) == orcl[3]);
+        assertTrue(mosm.orcl(orcl[3]) == 1); // feed was re-lifted
+        assertTrue(mosm.orcl(orcl[7]) == 0); // feed was not
+        assertTrue(mosm.lifted_length() - orcl.length == 1);
+    }
+
+    function testAuditRely() public {
+        assertTrue(mosm.authedMedian(0) == address(this));
+        assertTrue(mosm.authedOsm(0) == address(this));
+
+        mosm.osm_rely(0xdeaDBeefdEAdBEEFdeadBEeFdEAdbEEfdead0001);
+        assertTrue(mosm.authedOsm_length() == 2);
+        assertTrue(mosm.wards("osm", mosm.authedOsm(1)) == 1);
+
+        mosm.median_rely(0xdeADbeefDeAdbeEfDeaDBEEfDEadbeEFdeAd0002);
+        mosm.median_rely(0xDeADBEEFDeAdBEEFDEAdBeeFdeadbeefdEaD0003);
+        assertTrue(mosm.authedMedian_length() == 3);
+
+        mosm.median_deny(0xDeADBEEFDeAdBEEFDEAdBeeFdeadbeefdEaD0003);
+        assertTrue(mosm.wards("median", mosm.authedMedian(1)) == 1);
+        assertTrue(mosm.wards("median", mosm.authedMedian(2)) == 0);
+    }
 }

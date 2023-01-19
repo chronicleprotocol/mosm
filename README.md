@@ -17,6 +17,10 @@ Note that all other behaviors that exist in the original implementations of Medi
 
 The two contracts we've merged here shared some naming conventions. E.g. they both have a method named `peek()`. Since OSM is the "public facing" contract, where collisions occurred we prefixed the Median-side functions. E.g. this contract retains the `peek()` method for OSM and `median_peek()` for Median.
 
+### Auditability
+
+For `lift()` and `rely()` we've added append-only arrays that can be used to audit the permissions on the contract. Simply put, whenever a feed is added via `lift()`, or any time an address is given auth via `rely()` their address is appended to the respective array. These arrays are public and can easily be iterated over to obtain addresses to then check against the appropriate permissions structure.
+
 ## Build and test
 
 To build the contract from source do

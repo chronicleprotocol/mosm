@@ -54,9 +54,22 @@ contract Mosm is LibNote {
     // Whitelisted feed readers, set by an auth
     mapping (bytes32 => mapping (address => uint256)) public bud;
 
+    address[] public lifted;
+    function lifted_length() public view returns(uint256) { return lifted.length; }
+
+    address[] public authedMedian;
+    function authedMedian_length() external view  returns(uint256) { return authedMedian.length; }
+
+    address[] public authedOsm;
+    function authedOsm_length() external view returns(uint256) { return authedOsm.length; }
+
 // contract Median {
     // --- Auth ---
-    function median_rely(address usr) external note median_auth { wards["median"][usr] = 1; }
+    function median_rely(address usr) external note median_auth {
+        if (wards["median"][usr] == 1) return;
+        wards["median"][usr] = 1;
+        authedMedian.push(usr);
+    }
     function median_deny(address usr) external note median_auth { wards["median"][usr] = 0; }
 
     modifier median_auth {
@@ -79,11 +92,14 @@ contract Mosm is LibNote {
 
     event LogMedianPrice(uint256 val, uint256 age);
 
-    //Set type of Oracle
     constructor() public {
         wards["median"][msg.sender] = 1;
+        authedMedian.push(msg.sender);
+
         wards["osm"][msg.sender] = 1;
-        bud["median"][address(this)] = 1; // Deployer by default gets read access
+        authedOsm.push(msg.sender);
+
+        bud["median"][address(this)] = 1; // Allows OSM half to peek at Median half
         bud["osm"][msg.sender] = 1;
     }
 
@@ -143,6 +159,7 @@ contract Mosm is LibNote {
             require(slot[s] == address(0), "Median/signer-already-exists");
             orcl[a[i]] = 1;
             slot[s] = a[i];
+            lifted.push(a[i]);
         }
     }
 
@@ -183,7 +200,11 @@ contract Mosm is LibNote {
 //} contract Median
 
 // contract OSM {
-    function osm_rely(address usr) external note osm_auth { wards["osm"][usr] = 1; }
+    function osm_rely(address usr) external note osm_auth {
+        if (wards["osm"][usr] == 1) return;
+        wards["osm"][usr] = 1;
+        authedOsm.push(usr);
+    }
     function osm_deny(address usr) external note osm_auth { wards["osm"][usr] = 0; }
     modifier osm_auth {
         require(wards["osm"][msg.sender] == 1, "OSM/not-authorized");
